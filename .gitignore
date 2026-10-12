@@ -1,1 +1,21 @@
 README.md
+
+# Build artifacts
+bin/
+dist/
+build/
+
+# Compiled binaries
+*.exe
+*.test
+*.out
+
+# Environment
+.env
+.env.*
+!env.schema
+
+# IDE
+.idea/
+.vscode/
+.zed/

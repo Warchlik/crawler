@@ -26,7 +26,7 @@ func NewConfig(url string, workers int, maxDepth int, rate int, userAgent string
 	return &cfg
 }
 
-func ParseConfig() (*Config, error) {
+func LoadConfig() (*Config, error) {
 	var cfg Config
 
 	flag.StringVar(&cfg.Url, "url", "", "Crawling url")
@@ -38,6 +38,10 @@ func ParseConfig() (*Config, error) {
 
 	if cfg.Url == "" {
 		return nil, fmt.Errorf("url is required")
+	}
+
+	if cfg.Workers < 1 {
+		return nil, fmt.Errorf("worker can not be less then 0")
 	}
 
 	return &cfg, nil
