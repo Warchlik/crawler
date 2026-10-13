@@ -9,6 +9,7 @@ import (
 	"unicode"
 )
 
+// TODO: Fix Url name to URL
 type Config struct {
 	Url       []string
 	Workers   int
