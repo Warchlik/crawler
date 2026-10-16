@@ -33,40 +33,45 @@ func Run() error {
 
 	start := time.Now()
 
-	var failed int
+	var results []crawler.Result
+
 	if cfg.Workers > 1 {
-		failed = runConcurrent(
+		results = runConcurrent(
 			ctx,
 			c,
 			cfg.URL,
 			cfg.Workers,
-			cfg.Show,
 		)
 	} else {
-		failed = runSequential(
+		results = runSequential(
 			ctx,
 			c,
 			cfg.URL,
-			cfg.Show,
 		)
 	}
+
+	failed := report(results, cfg.Show)
 
 	fmt.Printf("done: %d urls, %d failed, %d workers, %s\n",
 		len(cfg.URL), failed, max(cfg.Workers, 1), time.Since(start).Round(time.Millisecond))
 	return nil
 }
 
-func report(res crawler.Result, show bool) (failed bool) {
-	if res.Err != nil {
-		fmt.Printf("FAIL %s (%s): %v\n", res.URL, res.Took.Round(time.Millisecond), res.Err)
-		return true
-	}
-	fmt.Printf("OK %s (%s): %d links\n", res.URL, res.Took.Round(time.Millisecond), len(res.Links))
+func report(results []crawler.Result, show bool) (failed int) {
+	for _, res := range results {
+		if res.Err != nil {
+			fmt.Printf("FAIL %s (%s): %v\n", res.URL, res.Took.Round(time.Millisecond), res.Err)
+			failed = failed + 1
+			continue
+		}
+		fmt.Printf("OK %s (%s): %d links\n", res.URL, res.Took.Round(time.Millisecond), len(res.Links))
 
-	if show {
-		for _, link := range res.Links {
-			fmt.Println("    ", link)
+		if show {
+			for _, link := range res.Links {
+				fmt.Println("    ", link)
+			}
 		}
 	}
-	return false
+
+	return failed
 }

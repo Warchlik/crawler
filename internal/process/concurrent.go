@@ -12,8 +12,7 @@ func runConcurrent(
 	c *crawler.Crawler,
 	urls []string,
 	workers int,
-	show bool,
-) (failed int) {
+) []crawler.Result {
 	workers = min(workers, len(urls))
 
 	jobs := make(chan string, len(urls))
@@ -22,29 +21,27 @@ func runConcurrent(
 	}
 	close(jobs)
 
-	results := make(chan crawler.Result)
+	processed := make(chan crawler.Result)
 
 	var wg sync.WaitGroup
 	for range workers {
 		wg.Go(func() {
 			for u := range jobs {
-				results <- c.Process(ctx, u)
+				processed <- c.Process(ctx, u)
 			}
 		})
 	}
 
 	go func() {
 		wg.Wait()
-		close(results)
+		close(processed)
 	}()
 
-	for res := range results {
-		if report(res, show) {
-			failed++
-		}
+	var results []crawler.Result
+
+	for p := range processed {
+		results = append(results, p)
 	}
 
-	failed = 0
-
-	return failed
+	return results
 }
