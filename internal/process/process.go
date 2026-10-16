@@ -1,0 +1,72 @@
+// Package process will implement standard structure for 2 implementation,
+// with contains synchonicous crawling and gorutines runtime
+package process
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"time"
+
+	"siteprobe/internal/config"
+	"siteprobe/internal/crawler"
+	"siteprobe/internal/fetcher"
+	"siteprobe/internal/parser"
+)
+
+const requestTimeout = 10 * time.Second
+
+func Run() error {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return err
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	c := crawler.NewCrawler(
+		fetcher.NewFetcher(requestTimeout, cfg.UserAgent),
+		parser.NewHTMLParser(),
+	)
+
+	start := time.Now()
+
+	var failed int
+	if cfg.Workers > 1 {
+		failed = runConcurrent(
+			ctx,
+			c,
+			cfg.URL,
+			cfg.Workers,
+			cfg.Show,
+		)
+	} else {
+		failed = runSequential(
+			ctx,
+			c,
+			cfg.URL,
+			cfg.Show,
+		)
+	}
+
+	fmt.Printf("done: %d urls, %d failed, %d workers, %s\n",
+		len(cfg.URL), failed, max(cfg.Workers, 1), time.Since(start).Round(time.Millisecond))
+	return nil
+}
+
+func report(res crawler.Result, show bool) (failed bool) {
+	if res.Err != nil {
+		fmt.Printf("FAIL %s (%s): %v\n", res.URL, res.Took.Round(time.Millisecond), res.Err)
+		return true
+	}
+	fmt.Printf("OK %s (%s): %d links\n", res.URL, res.Took.Round(time.Millisecond), len(res.Links))
+
+	if show {
+		for _, link := range res.Links {
+			fmt.Println("    ", link)
+		}
+	}
+	return false
+}
