@@ -33,7 +33,7 @@ func Run() error {
 
 	start := time.Now()
 
-	var results []crawler.Result
+	var results <-chan crawler.Result
 
 	if cfg.Workers > 1 {
 		results = runConcurrent(
@@ -57,11 +57,11 @@ func Run() error {
 	return nil
 }
 
-func report(results []crawler.Result, show bool) (failed int) {
-	for _, res := range results {
+func report(results <-chan crawler.Result, show bool) (failed int) {
+	for res := range results {
 		if res.Err != nil {
 			fmt.Printf("FAIL %s (%s): %v\n", res.URL, res.Took.Round(time.Millisecond), res.Err)
-			failed = failed + 1
+			failed++
 			continue
 		}
 		fmt.Printf("OK %s (%s): %d links\n", res.URL, res.Took.Round(time.Millisecond), len(res.Links))

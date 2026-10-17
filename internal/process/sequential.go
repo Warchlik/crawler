@@ -2,6 +2,7 @@ package process
 
 import (
 	"context"
+	"sync"
 
 	"siteprobe/internal/crawler"
 )
@@ -10,11 +11,22 @@ func runSequential(
 	ctx context.Context,
 	c *crawler.Crawler,
 	urls []string,
-) []crawler.Result {
-	var results []crawler.Result
-	for _, u := range urls {
-		results = append(results, c.Process(ctx, u))
-	}
+) <-chan crawler.Result {
+	processed := make(chan crawler.Result)
 
-	return results
+	var wg sync.WaitGroup
+
+	wg.Go(func() {
+		defer close(processed)
+
+		for _, u := range urls {
+			select {
+			case processed <- c.Process(ctx, u):
+			case <-ctx.Done():
+				return
+			}
+		}
+	})
+
+	return processed
 }

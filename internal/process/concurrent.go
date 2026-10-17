@@ -12,7 +12,7 @@ func runConcurrent(
 	c *crawler.Crawler,
 	urls []string,
 	workers int,
-) []crawler.Result {
+) <-chan crawler.Result {
 	workers = min(workers, len(urls))
 
 	jobs := make(chan string, len(urls))
@@ -27,7 +27,11 @@ func runConcurrent(
 	for range workers {
 		wg.Go(func() {
 			for u := range jobs {
-				processed <- c.Process(ctx, u)
+				select {
+				case processed <- c.Process(ctx, u):
+				case <-ctx.Done():
+					return
+				}
 			}
 		})
 	}
@@ -37,11 +41,5 @@ func runConcurrent(
 		close(processed)
 	}()
 
-	var results []crawler.Result
-
-	for p := range processed {
-		results = append(results, p)
-	}
-
-	return results
+	return processed
 }
