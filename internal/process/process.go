@@ -51,9 +51,10 @@ func Run() error {
 	}
 
 	failed := report(results, cfg.Show)
+	done := len(cfg.URL) - failed
 
 	fmt.Printf("done: %d urls, %d failed, %d workers, %s\n",
-		len(cfg.URL), failed, max(cfg.Workers, 1), time.Since(start).Round(time.Millisecond))
+		done, failed, max(cfg.Workers, 1), time.Since(start).Round(time.Millisecond))
 	return nil
 }
 
